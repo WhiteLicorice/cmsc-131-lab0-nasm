@@ -64,7 +64,7 @@ every file you write. Windows C puts a leading underscore on the names it
 exports. Linux C doesn't, so the entry point is `_asm_main` on one platform and
 `asm_main` on the other. Rather than keep two spellings of every program,
 `asm_io.inc` remaps the name when `ELF_TYPE` is defined. You write
-`global _asm_main` and `_asm_main:` everywhere, and the assembler emits
+`global _asm_main` and `_asm_main:` everywhere. The assembler emits
 whichever the platform needs. That's the first addition to Carter's files.
 
 Linking is the third. Windows needs `-Wl,-subsystem,console` to say this is a
@@ -83,7 +83,7 @@ because it doesn't include `asm_io.inc`.
 
 The `Makefile` checks the `OS` environment variable *and* `uname`. That looks
 redundant and isn't. A `make` built for MSYS2 or Cygwin reports `OS` as empty
-even while running on Windows, and you can acquire one of those by accident,
+even while running on Windows. You can acquire one of those by accident,
 for instance by installing MSYS2's `make` package alongside the `mingw32-make`
 this course uses. With only the `OS` check, such a `make` picks the Linux
 branch on a Windows machine. The build then fails several steps later with an
@@ -184,7 +184,7 @@ under the same terms, and the rest of the repository follows so that nothing
 here is ambiguous about which terms apply to what.
 
 Using this as course material is noncommercial use, so the restriction costs
-students nothing. [LICENSE](LICENSE) records who wrote what and exactly what
+students nothing. [LICENSE](LICENSE) records who wrote what and what
 was changed in Carter's files.
 
 ## The line-ending trap
