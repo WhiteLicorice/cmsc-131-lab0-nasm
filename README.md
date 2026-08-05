@@ -47,6 +47,10 @@ make PROG=lab1 check
 Carter's files are his. Each addition to them is marked in place with a comment
 saying so. Both are described below.
 
+The whole repository is under CC BY-NC-SA 4.0, because Carter's code is and
+its ShareAlike condition reaches anything adapted from it. See
+[LICENSE](LICENSE).
+
 ## How one source tree builds on two platforms
 
 Three things differ between Windows and Linux. The `Makefile` absorbs all three
@@ -170,6 +174,18 @@ Linux instructions inside it. On Apple Silicon, the fast virtual machine option
 is an ARM64 image, which boots quickly and then can't run this course's output
 at all. The image has to be x86_64, which means emulation and a slow install.
 The build itself is small enough that the emulation barely shows.
+
+## License
+
+CC BY-NC-SA 4.0, inherited from Paul Carter's
+[pcasm](https://github.com/pacman128/pcasm) rather than chosen. His code
+carries a ShareAlike condition, so the two files adapted from it have to stay
+under the same terms, and the rest of the repository follows so that nothing
+here is ambiguous about which terms apply to what.
+
+Using this as course material is noncommercial use, so the restriction costs
+students nothing. [LICENSE](LICENSE) records who wrote what and exactly what
+was changed in Carter's files.
 
 ## The line-ending trap
 
