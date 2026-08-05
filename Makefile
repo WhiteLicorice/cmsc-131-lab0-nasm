@@ -3,7 +3,8 @@
 # Usage:
 #   make              build the program (default: skel)
 #   make run          build, then run it
-#   make check        build, run, and diff against PROG.expected
+#   make check        build, run against PROG.input if it exists, and diff
+#                     the output against PROG.expected
 #   make clean        delete build output
 #
 # Point it at a different program with PROG:
@@ -70,12 +71,21 @@ driver.o: driver.c cdecl.h
 run: $(BIN)
 	./$(BIN)
 
+# check feeds $(PROG).input on stdin when that file exists. Every program that
+# calls read_int needs it: without a file to read from, the program waits on a
+# keyboard that isn't there and check hangs instead of failing. skel has no
+# .input, so it runs exactly as it always did.
+#
+# $(wildcard) is make's own test rather than the shell's, which keeps this one
+# line working the same way under Git Bash and under a Linux shell.
+STDIN := $(if $(wildcard $(PROG).input),< $(PROG).input,)
+
 # --strip-trailing-cr matters on Windows: the .exe emits Windows line endings
 # (\r\n) while $(PROG).expected is stored with Unix ones (\n). Without it
 # every line differs invisibly and check fails on output that is actually
 # correct. It is harmless everywhere else.
 check: $(BIN)
-	@./$(BIN) | diff -u --strip-trailing-cr $(PROG).expected - && echo "OK: $(PROG) matches $(PROG).expected"
+	@./$(BIN) $(STDIN) | diff -u --strip-trailing-cr $(PROG).expected - && echo "OK: $(PROG) matches $(PROG).expected"
 
 clean:
 	rm -f *.obj *.o *.exe $(PROG)

@@ -31,6 +31,30 @@ Point it at a different program with `PROG`:
 make PROG=lab1 check
 ```
 
+### Programs that read input
+
+`skel` reads nothing, so `check` just runs it. A program that calls `read_int`
+needs somewhere to read from, and a `check` that leaves it reading the keyboard
+hangs rather than failing. So when `$(PROG).input` exists, `check` feeds it on
+stdin:
+
+```bash
+make PROG=convert check      # runs ./convert.exe < convert.input
+```
+
+Watch what that does to the expected output. Reading from a file rather than a
+keyboard means nothing echoes the typed digits back, so a prompt and the answer
+that follows it land on the same line:
+
+```
+Enter a number: You typed: 42
+```
+
+Run the same program by hand and you'll see `42` on the line you typed it. The
+program printed the same bytes both times; the terminal was adding your
+keystrokes in the first case. `$(PROG).expected` has to hold the quieter
+version, which is the one `check` compares against.
+
 ## Contents
 
 | File | Origin | Purpose |
@@ -104,6 +128,19 @@ predicted.
 | the same four through the `make` alias | all pass, `run` prints `Hello, world!` |
 | MSYS2-built `make` picks the Windows branch | passes after the `uname` fix above |
 
+**Windows, 2026-08-06.** Same machine, covering the `check` change that feeds
+`$(PROG).input` on stdin.
+
+| Check | Result |
+|---|---|
+| `make check` with no `.input` present | `OK: skel matches skel.expected`, exit 0, unchanged from before |
+| `make PROG=x check` with an `.input` present | reads the file, passes, exit 0 |
+| a `read_int` program run with its input redirected | prints no echo of the typed digits, so the prompt and the next output share a line |
+
+That last row is why `$(PROG).expected` files here hold output with no typed
+digits in them. It surprised the person writing this and it will surprise
+students, so it's written down rather than left to be rediscovered.
+
 Toolchain observed:
 
 ```
@@ -161,6 +198,17 @@ gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
   definition around it isn't. It keeps naming `mingw32-make` explicitly on
   Windows rather than `make`, because editor tasks run a non-interactive shell
   that never reads your `.bashrc` and so never sees the alias.
+- `gdb`, which Block 4 is built on. It could not be run here. The MSYS2
+  `mingw32` `gdb.exe` on this machine exits 127 with
+  `error while loading shared libraries: ?: cannot open shared object file`,
+  naming nothing. Its import table asks for `libpython3.14.dll` while the
+  installed Python package provides `libpython3.12.dll`, so the debugger
+  package is newer than the Python it links against. That happens when
+  `pacman -Syu` is interrupted partway, or when the toolchain group is
+  installed long after the rest of the system was last updated. A full
+  `pacman -Syu` is the fix. Block 4's claims about `break asm_main` and
+  `x/5i $eip` against a COFF binary with no debug information are therefore
+  still unproven, and someone has to run them before that block ships.
 
 ## macOS
 
