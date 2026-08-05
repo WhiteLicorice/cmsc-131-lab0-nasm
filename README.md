@@ -141,6 +141,38 @@ That last row is why `$(PROG).expected` files here hold output with no typed
 digits in them. It surprised the person writing this and it will surprise
 students, so it's written down rather than left to be rediscovered.
 
+**Windows, 2026-08-06, gdb.** Block 4 rests entirely on the debugger, and none
+of what it claims had been run. All of it was, against `broken.exe`, a COFF
+binary carrying no debug information, under GNU gdb 17.2.
+
+| Check | Result |
+|---|---|
+| `break _asm_main` | `Function "_asm_main" not defined.`, which is the message Block 4 quotes |
+| `break asm_main` | resolves, `Breakpoint 1 at 0x401604` |
+| `run` | stops with `Thread 1 hit Breakpoint 1 ... in asm_main ()` |
+| `x/5i $eip` | prints Intel operand order after `set disassembly-flavor intel` |
+| `info registers edx` at entry | `0x30000`, so the garbage Block 4 promises is there |
+| `si` | advances one instruction |
+| `ni` | advances one instruction, stepping over rather than into |
+| running on to the fault | `SIGFPE`, and `x/1i $eip` names `div ebx` |
+| registers at the fault | `eax` 1000, `ebx` 7, `edx` dirty, which is the diagnosis Block 4 asks students to reach |
+| a `.gdbinit` beside the program | declined, with the `auto-load safe-path` paragraph, and the flavor stays `att` |
+| `~/.gdbinit` | loaded, flavor becomes `intel` |
+
+Two notes for whoever revises Block 4. gdb 17.2 names
+`~/.config/gdb/gdbinit` in that refusal message rather than `~/.gdbinit`, but
+both files are read and the manual's instruction works as written. And the
+`edx` value differs per run, so the specific number in the manual's sample
+session is an illustration rather than something a student will match.
+
+One way this was reached is worth recording, because the same trap is waiting
+for students. The `mingw32` gdb exited 127 with
+`error while loading shared libraries: ?: cannot open shared object file`,
+naming no file. Its import table asked for `libpython3.14.dll` while the
+installed package provided `libpython3.12.dll`, so the debugger was newer than
+the Python it links against. `pacman -Syu` to completion fixed it, bringing
+`mingw-w64-i686-python` to 3.14.6-2. Block 1 carries this as a pitfall.
+
 Toolchain observed:
 
 ```
@@ -198,18 +230,6 @@ gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
   definition around it isn't. It keeps naming `mingw32-make` explicitly on
   Windows rather than `make`, because editor tasks run a non-interactive shell
   that never reads your `.bashrc` and so never sees the alias.
-- `gdb`, which Block 4 is built on. It could not be run here. The MSYS2
-  `mingw32` `gdb.exe` on this machine exits 127 with
-  `error while loading shared libraries: ?: cannot open shared object file`,
-  naming nothing. Its import table asks for `libpython3.14.dll` while the
-  installed Python package provides `libpython3.12.dll`, so the debugger
-  package is newer than the Python it links against. That happens when
-  `pacman -Syu` is interrupted partway, or when the toolchain group is
-  installed long after the rest of the system was last updated. A full
-  `pacman -Syu` is the fix. Block 4's claims about `break asm_main` and
-  `x/5i $eip` against a COFF binary with no debug information are therefore
-  still unproven, and someone has to run them before that block ships.
-
 ## macOS
 
 There's no native path. That isn't a gap in the instructions. macOS dropped
