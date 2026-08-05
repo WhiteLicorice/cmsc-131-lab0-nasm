@@ -215,12 +215,52 @@ NASM version 2.16.01
 gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
 ```
 
+**Linux, 2026-08-06, by hand.** Ubuntu 24.04.3 LTS on x86_64, a machine that
+had no `nasm` and no 32-bit libraries on it. Everything below was run as a
+student would run it, from the block download archives rather than from a
+clone.
+
+Block 1's Linux instructions were executed as printed. `apt install -y nasm`
+and `apt install -y gcc-multilib gdb make` both worked on a clean system,
+giving NASM 2.16.01 and gcc 13.3.0. Then the project was built by hand the way
+Part 7 asks, with the `Makefile` and the four-line `asm_io` addition taken out
+of the manual text rather than copied from here, so what was tested is what a
+student types.
+
+| Check | Result |
+|---|---|
+| `make run` after the hand build | `Hello, world!`, and the Linux branch chose `-f elf32 -d ELF_TYPE` and `-no-pie` |
+| linker warnings about an executable stack | none, so the `.note.GNU-stack` addition does its job |
+| `make check` | `OK: skel matches skel.expected` |
+| `make clean` then `check` again | rebuilds and passes |
+| blocks 2, 3, 5, 6 and 7, each solution against its fixture | all five report `OK` |
+| block 4, unfixed | dies with signal 8, `Floating point exception` |
+| block 4, one instruction added | `OK` |
+| block 8's exit check against its fixture | `OK` |
+| all five starter files | assemble untouched |
+| `b1_doctor.sh` | reports `linux` and passes all eight checks |
+| the validation scripts | run under `python3` |
+
+The same `.expected` files were used on both platforms, unchanged. Nothing in
+the fixtures is per-platform, which is the point of `--strip-trailing-cr` in
+the `check` recipe.
+
+**gdb on Linux, same day.** Block 4's session was walked against the ELF
+binary as well as the COFF one. `break _asm_main` fails and `break asm_main`
+resolves, exactly as on Windows, though for a different reason: here the
+`asm_io.inc` remap has already stripped the underscore before the assembler
+sees it. `edx` again holds garbage at entry, `0xffffccc0` this time, and the
+fault lands on `div ebx` with a divisor of 7.
+
+One Linux-only wrinkle worth knowing. Ubuntu's gdb asks whether to enable
+`debuginfod` the first time it starts. It is harmless and answering `n` is
+right for this course. Block 4 says so.
+
 ## What wasn't tested
 
-- Linux on anything but a GitHub runner. The workflow proves Ubuntu 24.04 on
-  `ubuntu-latest`. Nobody has sat at a Debian box and run this by hand. The
-  manual's `apt` install line was read against Debian's package listings rather
-  than executed on a fresh machine.
+- Debian specifically. Ubuntu 24.04 has now been walked by hand, and the
+  `apt` lines in Block 1 were executed rather than read, but Debian's own
+  package listings were only read. The package names are the same on both.
 - macOS, at all. No Apple hardware was involved. See below.
 - A first-time install on a machine that has never had MSYS2. The toolchain
   here was already present, so this project proves the build works, not that
