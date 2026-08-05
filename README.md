@@ -2,9 +2,9 @@
 
 # CMSC 131 reference project
 
-A working NASM project you can compare against when your own setup misbehaves,
-and the thing every command printed in the bootcamp manuals is checked against
-rather than trusted on sight.
+A working NASM project you can compare against when your own setup misbehaves.
+It's also what every command printed in the bootcamp manuals gets checked
+against, rather than trusted on sight.
 
 It builds on Windows and on Linux from the same sources. macOS can't run it
 natively, for reasons given below.
@@ -44,31 +44,31 @@ make PROG=lab1 check
 | `.vscode/tasks.json` | this repository | Optional editor wrapper that shells out to the Makefile |
 | `.github/workflows/test.yml` | this repository | Proves the Linux build on every push |
 
-Carter's files are his. The two additions to them are marked in place with a
-comment saying so, and both are described below.
+Carter's files are his. Each addition to them is marked in place with a comment
+saying so. Both are described below.
 
 ## How one source tree builds on two platforms
 
-Three things differ between Windows and Linux, and the `Makefile` handles all
-three by switching on the platform it detects.
+Three things differ between Windows and Linux. The `Makefile` absorbs all three
+by switching on the platform it detects.
 
-**Object format.** Windows wants COFF objects (`-f win32`), Linux wants ELF
-(`-f elf32`).
+The object format is one. Windows wants COFF objects, so `-f win32`. Linux
+wants ELF, so `-f elf32`.
 
-**Symbol decoration.** Windows C puts a leading underscore on the names it
-exports and Linux C doesn't, so the entry point is `_asm_main` on one and
-`asm_main` on the other. Rather than make you keep two spellings of every
-program, `asm_io.inc` remaps the name when `ELF_TYPE` is defined. You write
+Symbol decoration is the second. It's the one that would otherwise reach into
+every file you write. Windows C puts a leading underscore on the names it
+exports. Linux C doesn't, so the entry point is `_asm_main` on one platform and
+`asm_main` on the other. Rather than keep two spellings of every program,
+`asm_io.inc` remaps the name when `ELF_TYPE` is defined. You write
 `global _asm_main` and `_asm_main:` everywhere, and the assembler emits
-whichever one the platform needs. This is the first of the two additions to
-Carter's files.
+whichever the platform needs. That's the first addition to Carter's files.
 
-**Linking.** Windows needs `-Wl,-subsystem,console` to say this is a
+Linking is the third. Windows needs `-Wl,-subsystem,console` to say this is a
 command-line program. Linux needs `-no-pie`, because gcc has defaulted to
-position-independent executables since Ubuntu 17.10 and the absolute
-addressing this course teaches cannot be relocated that way. Without it the
-link fails with `relocation R_386_32 ... can not be used when making a PIE
-object`, which does not obviously mean what it means.
+position-independent executables since Ubuntu 17.10, while the absolute
+addressing this course teaches can't be relocated that way. Leave it out and
+the link fails with `relocation R_386_32 ... can not be used when making a PIE
+object`, which tells you very little unless you already knew this paragraph.
 
 The second addition is a `.note.GNU-stack` section in both `asm_io.inc` and
 `asm_io.asm`. Without it, binutils 2.39 and later warn on every link that the
@@ -79,12 +79,12 @@ because it doesn't include `asm_io.inc`.
 
 The `Makefile` checks the `OS` environment variable *and* `uname`. That looks
 redundant and isn't. A `make` built for MSYS2 or Cygwin reports `OS` as empty
-even when it's running on Windows, and it's easy to acquire one of those by
-accident, for instance by installing MSYS2's `make` package alongside the
-`mingw32-make` this course uses. With only the `OS` check, such a `make` picks
-the Linux branch on a Windows machine and the build fails several steps later
-with an error that points nowhere near the cause. This was hit during
-validation, not predicted.
+even while running on Windows, and you can acquire one of those by accident,
+for instance by installing MSYS2's `make` package alongside the `mingw32-make`
+this course uses. With only the `OS` check, such a `make` picks the Linux
+branch on a Windows machine. The build then fails several steps later with an
+error pointing nowhere near the cause. This was hit during validation, not
+predicted.
 
 ## Validation record
 
@@ -110,7 +110,7 @@ GNU Make 4.4.1
 ```
 
 **Cross-format checks, 2026-08-05, run on Windows.** NASM can emit ELF objects
-from a Windows host, so the half of the Linux path that is pure assembly was
+from a Windows host, so the half of the Linux path that's pure assembly was
 checked here rather than left to CI. `skel.asm` and `asm_io.asm` both assemble
 under `-f elf32 -d ELF_TYPE`. The resulting `skel` object exports `asm_main`
 with no underscore while the COFF object exports `_asm_main`, which is the
@@ -121,12 +121,12 @@ Both ELF objects carry `.note.GNU-stack`.
 **Linux, 2026-08-05, by continuous integration.**
 `.github/workflows/test.yml` installs `nasm` and `gcc-multilib` on
 `ubuntu-latest`, runs `make check`, rebuilds from clean, and fails the run if
-the linker mentions an executable stack. It went green on the first push, all
-five steps, reporting `OK: skel matches skel.expected`. This is the proof for
-the parts of the Linux build no machine here can exercise, which is the link
-step and running the binary.
+the linker mentions an executable stack. It went green on the first push, with
+every step passing and the check reporting `OK: skel matches skel.expected`.
+This is the proof for the parts of the Linux build no machine here can
+exercise, meaning the link step and running the binary.
 
-The commands it actually ran, which are the platform switches doing their job:
+The commands it ran, which are the platform switches doing their job:
 
 ```
 nasm -f elf32 -d ELF_TYPE skel.asm -o skel.obj
@@ -144,33 +144,32 @@ gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
 
 ## What wasn't tested
 
-- **Linux on anything but a GitHub runner.** The workflow proves Ubuntu 24.04
-  on `ubuntu-latest`. Nobody has sat at a Debian box and run this by hand, and
-  the manual's `apt` install line has been read against Debian's package
-  listings rather than executed on a fresh machine.
-- **macOS, at all.** No Apple hardware was involved. See below.
-- **A first-time install on a machine that has never had MSYS2.** The toolchain
+- Linux on anything but a GitHub runner. The workflow proves Ubuntu 24.04 on
+  `ubuntu-latest`. Nobody has sat at a Debian box and run this by hand. The
+  manual's `apt` install line was read against Debian's package listings rather
+  than executed on a fresh machine.
+- macOS, at all. No Apple hardware was involved. See below.
+- A first-time install on a machine that has never had MSYS2. The toolchain
   here was already present, so this project proves the build works, not that
   the install instructions in Block 1 are complete. Someone has to walk those
   on a clean machine before August 19.
-- **The `.vscode/tasks.json` wrapper.** The Makefile it calls is tested. The
-  task definition around it isn't. It keeps naming `mingw32-make` explicitly on
+- The `.vscode/tasks.json` wrapper. The Makefile it calls is tested. The task
+  definition around it isn't. It keeps naming `mingw32-make` explicitly on
   Windows rather than `make`, because editor tasks run a non-interactive shell
   that never reads your `.bashrc` and so never sees the alias.
 
 ## macOS
 
-There is no native path, and this isn't a gap in the instructions. macOS
-dropped the ability to execute 32-bit binaries in Catalina, and Apple Silicon
-can't run i386 code at all, including under Rosetta. Nothing in this project
-can be made to run natively on a current Mac.
+There's no native path. That isn't a gap in the instructions. macOS dropped
+the ability to execute 32-bit binaries in Catalina, and Apple Silicon can't run
+i386 code at all, including under Rosetta. Nothing in this project can be made
+to run natively on a current Mac.
 
 Block 1 has macOS students run an x86_64 Linux virtual machine and follow the
-Linux instructions inside it. The one trap worth repeating here: on Apple
-Silicon, the fast virtual machine option is an ARM64 image, which boots quickly
-and then cannot run this course's output at all. The image has to be x86_64,
-which means emulation and a slow install. The build itself is small enough that
-the emulation barely shows.
+Linux instructions inside it. On Apple Silicon, the fast virtual machine option
+is an ARM64 image, which boots quickly and then can't run this course's output
+at all. The image has to be x86_64, which means emulation and a slow install.
+The build itself is small enough that the emulation barely shows.
 
 ## The line-ending trap
 
