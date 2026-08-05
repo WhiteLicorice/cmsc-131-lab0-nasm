@@ -1,0 +1,37 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build & Run",
+      "type": "shell",
+      "command": "make",
+      "args": ["PROG=${fileBasenameNoExtension}", "run"],
+      "options": { "cwd": "${fileDirname}" },
+      "windows": {
+        "command": "mingw32-make",
+        "options": {
+          "cwd": "${fileDirname}",
+          "shell": { "executable": "bash.exe", "args": ["-c"] }
+        }
+      },
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Check",
+      "type": "shell",
+      "command": "make",
+      "args": ["PROG=${fileBasenameNoExtension}", "check"],
+      "options": { "cwd": "${fileDirname}" },
+      "windows": {
+        "command": "mingw32-make",
+        "options": {
+          "cwd": "${fileDirname}",
+          "shell": { "executable": "bash.exe", "args": ["-c"] }
+        }
+      },
+      "group": "test",
+      "problemMatcher": []
+    }
+  ]
+}

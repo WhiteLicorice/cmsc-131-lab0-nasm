@@ -1,0 +1,38 @@
+name: reference-build
+on: [push]
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install the 32-bit toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nasm gcc-multilib
+
+      - name: Record versions
+        run: |
+          nasm -v
+          gcc --version
+
+      - name: Build and check
+        run: make check
+
+      - name: Rebuild from clean
+        run: |
+          make clean
+          make check
+
+      # .note.GNU-stack is added to asm_io.inc and asm_io.asm for this course.
+      # Without it binutils 2.39 and later warn that the missing section
+      # implies an executable stack. This step is what proves the addition
+      # actually works, so keep it.
+      - name: Link must not warn about an executable stack
+        run: |
+          make clean
+          make 2>&1 | tee build.log
+          if grep -qi "executable stack" build.log; then
+            echo "linker warned about an executable stack"
+            exit 1
+          fi

@@ -1,0 +1,16 @@
+# Keep these LF on every platform.
+#
+# A Makefile checked out with CRLF fails on Linux, because the carriage
+# return becomes part of each recipe line and the shell reports $'\r':
+# not found. The same goes for the multi-line run: blocks in the workflow.
+#
+# skel.expected is pinned because the check target compares it against
+# program output and the manuals describe it as holding Unix line endings.
+
+Makefile        text eol=lf
+skel.expected   text eol=lf
+*.yml           text eol=lf
+*.asm           text eol=lf
+*.inc           text eol=lf
+*.c             text eol=lf
+*.h             text eol=lf
