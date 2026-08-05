@@ -118,17 +118,36 @@ remap working. `asm_io.asm` refers to `printf`, `scanf`, and `putchar`
 undecorated under ELF and to `_printf`, `_scanf`, and `_putchar` under COFF.
 Both ELF objects carry `.note.GNU-stack`.
 
-**Linux, by continuous integration.** `.github/workflows/test.yml` installs
-`nasm` and `gcc-multilib` on `ubuntu-latest`, runs `make check`, rebuilds from
-clean, and fails the run if the linker mentions an executable stack. That
-workflow is the proof for the parts of the Linux build this machine cannot
-exercise, which is the linking step and running the binary.
+**Linux, 2026-08-05, by continuous integration.**
+`.github/workflows/test.yml` installs `nasm` and `gcc-multilib` on
+`ubuntu-latest`, runs `make check`, rebuilds from clean, and fails the run if
+the linker mentions an executable stack. It went green on the first push, all
+five steps, reporting `OK: skel matches skel.expected`. This is the proof for
+the parts of the Linux build no machine here can exercise, which is the link
+step and running the binary.
+
+The commands it actually ran, which are the platform switches doing their job:
+
+```
+nasm -f elf32 -d ELF_TYPE skel.asm -o skel.obj
+nasm -f elf32 -d ELF_TYPE asm_io.asm -o asm_io.obj
+gcc -m32 -c driver.c -o driver.o
+gcc -m32 skel.obj asm_io.obj driver.o -o skel -no-pie
+```
+
+Toolchain observed:
+
+```
+NASM version 2.16.01
+gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+```
 
 ## What wasn't tested
 
-- **Linking and running on Linux, locally.** There is no Linux machine in this
-  setup. The assembly half was checked here as described above and the rest is
-  covered by the workflow, but no one has sat at a Debian box and run this.
+- **Linux on anything but a GitHub runner.** The workflow proves Ubuntu 24.04
+  on `ubuntu-latest`. Nobody has sat at a Debian box and run this by hand, and
+  the manual's `apt` install line has been read against Debian's package
+  listings rather than executed on a fresh machine.
 - **macOS, at all.** No Apple hardware was involved. See below.
 - **A first-time install on a machine that has never had MSYS2.** The toolchain
   here was already present, so this project proves the build works, not that
