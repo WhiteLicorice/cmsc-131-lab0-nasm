@@ -11,7 +11,15 @@
         "command": "mingw32-make",
         "options": {
           "cwd": "${fileDirname}",
-          "shell": { "executable": "bash.exe", "args": ["-c"] }
+          // Git Bash by full path, not the name. On a machine with WSL the
+          // name bash.exe resolves to C:\Windows\System32\bash.exe, which
+          // starts Linux and has no mingw32-make in it. The shell block
+          // cannot be dropped either: the Makefile's recipes use rm, diff,
+          // and ./prog, none of which cmd.exe can run.
+          "shell": {
+            "executable": "C:\\Program Files\\Git\\bin\\bash.exe",
+            "args": ["-c"]
+          }
         }
       },
       "group": { "kind": "build", "isDefault": true },
@@ -27,7 +35,15 @@
         "command": "mingw32-make",
         "options": {
           "cwd": "${fileDirname}",
-          "shell": { "executable": "bash.exe", "args": ["-c"] }
+          // Git Bash by full path, not the name. On a machine with WSL the
+          // name bash.exe resolves to C:\Windows\System32\bash.exe, which
+          // starts Linux and has no mingw32-make in it. The shell block
+          // cannot be dropped either: the Makefile's recipes use rm, diff,
+          // and ./prog, none of which cmd.exe can run.
+          "shell": {
+            "executable": "C:\\Program Files\\Git\\bin\\bash.exe",
+            "args": ["-c"]
+          }
         }
       },
       "group": "test",

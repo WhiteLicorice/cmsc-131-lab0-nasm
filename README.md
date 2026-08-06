@@ -337,6 +337,27 @@ nothing either way, and on a machine with WSL the name `bash` resolves to
 the Git root from `git.exe` and looks for `bin\bash.exe` and
 `usr\bin\diff.exe` underneath it.
 
+**The editor tasks, 2026-08-06.** `.vscode/tasks.json` had never been run,
+only its Makefile had. Both of its tasks were replayed on Windows with the
+variables VS Code substitutes filled in by hand. The Windows branch was
+broken. It named its shell `bash.exe`, and on a machine with WSL that name
+belongs to `C:\Windows\System32\bash.exe`, so the task started Linux and
+answered `/bin/bash: line 1: mingw32-make: command not found`. It now names
+Git Bash by full path.
+
+Dropping the shell block instead looks like the simpler fix. It isn't. Run
+`mingw32-make` from PowerShell and
+the compile and link succeed, because those are program invocations, while
+`clean` dies with `CreateProcess(NULL, rm -f *.obj ...)` and `check` dies with
+`'.' is not recognized as an internal or external command`. Both recipes need
+a Unix shell. With Git Bash named in full, `Build & Run` prints
+`Hello, world!` and `Check` prints `OK: skel matches skel.expected`, both
+exiting 0.
+
+The task keeps naming `mingw32-make` explicitly on Windows rather than `make`,
+because editor tasks run a non-interactive shell that never reads your
+`.bashrc` and so never sees the alias.
+
 Toolchain observed:
 
 ```
@@ -355,10 +376,6 @@ git version 2.55.0.windows.2
   `apt` lines in Block 1 were executed rather than read, but Debian's own
   package listings were only read. The package names are the same on both.
 - macOS, at all. No Apple hardware was involved. See below.
-- The `.vscode/tasks.json` wrapper. The Makefile it calls is tested. The task
-  definition around it isn't. It keeps naming `mingw32-make` explicitly on
-  Windows rather than `make`, because editor tasks run a non-interactive shell
-  that never reads your `.bashrc` and so never sees the alias.
 ## macOS
 
 There's no native path. That isn't a gap in the instructions. macOS dropped
