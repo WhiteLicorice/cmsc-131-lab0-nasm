@@ -3,6 +3,7 @@
 # Usage:
 #   make              build the program (default: skel)
 #   make run          build, then run it
+#   make replay       build, then run it the way check does, with no diff
 #   make check        build, run against PROG.input if it exists, and diff
 #                     the output against PROG.expected
 #   make clean        delete build output
@@ -80,14 +81,28 @@ run: $(BIN)
 # line working the same way under Git Bash and under a Linux shell.
 STDIN := $(if $(wildcard $(PROG).input),< $(PROG).input,)
 
+# replay is the same run check performs, with the comparison left off, so the
+# bytes check reads can be read by a person. They are not the bytes you see
+# when you run the program yourself. Input arriving from a file means no
+# terminal is echoing your keystrokes back, so nothing puts the typed digits
+# on screen and a prompt shares a line with whatever prints after it. That
+# surprises everyone once. replay is how you look at it rather than take it on
+# faith.
+replay: $(BIN)
+	@./$(BIN) $(STDIN)
+
 # --strip-trailing-cr matters on Windows: the .exe emits Windows line endings
 # (\r\n) while $(PROG).expected is stored with Unix ones (\n). Without it
 # every line differs invisibly and check fails on output that is actually
 # correct. It is harmless everywhere else.
+#
+# The two --label flags name the sides of the diff. Without them the second
+# side prints as -, which is what diff calls stdin, and a student reading a
+# failure has to work out which half came from where.
 check: $(BIN)
-	@./$(BIN) $(STDIN) | diff -u --strip-trailing-cr $(PROG).expected - && echo "OK: $(PROG) matches $(PROG).expected"
+	@./$(BIN) $(STDIN) | diff -u --strip-trailing-cr --label "$(PROG).expected" --label "what $(PROG) printed" $(PROG).expected - && echo "OK: $(PROG) matches $(PROG).expected"
 
 clean:
 	rm -f *.obj *.o *.exe $(PROG)
 
-.PHONY: run check clean
+.PHONY: run replay check clean

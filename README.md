@@ -42,18 +42,30 @@ stdin:
 make PROG=convert check      # runs ./convert.exe < convert.input
 ```
 
-Watch what that does to the expected output. Reading from a file rather than a
-keyboard means nothing echoes the typed digits back, so a prompt and the answer
-that follows it land on the same line:
+That changes what the program prints, and `replay` is how you see it. It runs
+the program exactly as `check` does and stops there, comparing nothing:
+
+```bash
+make PROG=convert replay
+```
+
+What comes back is the contents of `convert.expected`. It doesn't look like
+what you get running the program by hand. A prompt shares a line with whatever
+prints after it, while the number that was read is nowhere on screen:
 
 ```
 Enter a number: You typed: 42
 ```
 
-Run the same program by hand and you'll see `42` on the line you typed it. The
-program printed the same bytes both times; the terminal was adding your
-keystrokes in the first case. `$(PROG).expected` has to hold the quieter
-version, which is the one `check` compares against.
+Run the same program yourself and `42` sits on the line you typed it. Nothing
+in the program changed. Typing at a terminal makes the terminal echo your
+keystrokes back, so that echo is what you were reading. Take the keyboard away
+and the echo goes with it, leaving only what the program wrote, which is what
+`check` compares against.
+
+So `$(PROG).expected` holds the quieter version. Generate one with `replay`
+rather than by hand, and check it against a run you trust before committing
+it.
 
 ## Contents
 
@@ -357,6 +369,27 @@ exiting 0.
 The task keeps naming `mingw32-make` explicitly on Windows rather than `make`,
 because editor tasks run a non-interactive shell that never reads your
 `.bashrc` and so never sees the alias.
+
+**The replay target and the diff labels, 2026-08-06.** Both are new here, so
+both were run before anything was written about them. `convert` was built from
+Block 2's carried-forward solution against Block 2's fixtures.
+
+| Check | Result |
+|---|---|
+| `make check` on `skel`, which has no `.input` | `OK: skel matches skel.expected`, exit 0, unchanged |
+| `make PROG=convert replay` on a built binary | three lines, byte-identical to `convert.expected` |
+| `make PROG=convert check` | `OK`, exit 0 |
+| the same check against a `convert.expected` broken on purpose | diff headed `--- convert.expected` and `+++ what convert printed`, exit 2 |
+| `make PROG=convert clean` then `check` again | rebuilds and passes |
+
+The labels are the reason for the fourth row. `diff` names stdin `-`, so a
+failing check used to head its second column with a single hyphen and leave
+the reader to work out which half of the output was theirs.
+
+One thing `replay` does not hide. The first run after a `clean` prints the
+four build commands above the program's output, because `make` echoes its
+recipes. Run it a second time and only the program's output is left. Worth
+knowing before you compare what you see against a fixture.
 
 Toolchain observed:
 
