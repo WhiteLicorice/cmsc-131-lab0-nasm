@@ -32,8 +32,12 @@
 
   ; Added for CMSC 131. This file does not include asm_io.inc, so it needs
   ; its own copy: without a .note.GNU-stack section, binutils 2.39 and later
-  ; warn that the missing section implies an executable stack.
+  ; warn that the missing section implies an executable stack. The isatty
+  ; remap goes with it, since the echo added to read_int and read_char calls
+  ; a C function that carries the same leading underscore as the rest.
   section .note.GNU-stack noalloc noexec nowrite progbits
+  %define __isatty isatty
+  ; End of CMSC 131 addition.
 %endif
 
 %ifdef OBJ_TYPE
@@ -43,6 +47,9 @@ segment .data
 %endif
 
 int_format	    db  "%i", 0
+; Added for CMSC 131. The format read_int echoes a value it just read with.
+int_echo_format     db  "%i", NL, 0
+; End of CMSC 131 addition.
 string_format       db  "%s", 0
 reg_format	    db  "Register Dump # %d", NL
 		    db  "EAX = %.8X EBX = %.8X ECX = %.8X EDX = %.8X", NL
@@ -81,6 +88,11 @@ segment .text
 	global  print_char, print_nl, sub_dump_regs, sub_dump_mem
         global  sub_dump_math, sub_dump_stack
         extern  _scanf, _printf, _getchar, _putchar, _fputs
+        ; Added for CMSC 131. Declared on its own line rather than appended to
+        ; Carter's, so that removing this course's additions leaves his line
+        ; exactly as he wrote it.
+        extern  __isatty
+        ; End of CMSC 131 addition.
 
 read_int:
 	enter	4,0
@@ -94,6 +106,23 @@ read_int:
 	pop	ecx
 	pop	ecx
 	
+	; Added for CMSC 131. With stdin coming from a file there is no
+	; terminal echoing the typed digits back, so the number never appears
+	; and the prompt shares a line with whatever prints next. Printing the
+	; value here puts it back, which makes a redirected run read the same
+	; as a typed one and lets PROG.expected hold what a student sees.
+	push	dword 0
+	call	__isatty
+	pop	ecx
+	test	eax, eax
+	jnz	.no_echo
+	push	dword [ebp-4]
+	push	dword int_echo_format
+	call	_printf
+	pop	ecx
+	pop	ecx
+.no_echo:
+	; End of CMSC 131 addition.
 	popf
 	popa
 	mov	eax, [ebp-4]
@@ -140,6 +169,22 @@ read_char:
 	call	_getchar
 	mov	[ebp-4], eax
 
+	; Added for CMSC 131. Same reason as read_int. This one echoes the
+	; exact byte it consumed rather than a reparsed value, which is
+	; precisely what the terminal would have printed. EOF is -1 and gets
+	; nothing.
+	cmp	dword [ebp-4], -1
+	je	.no_echo
+	push	dword 0
+	call	__isatty
+	pop	ecx
+	test	eax, eax
+	jnz	.no_echo
+	push	dword [ebp-4]
+	call	_putchar
+	pop	ecx
+.no_echo:
+	; End of CMSC 131 addition.
 	popf
 	popa
 	mov	eax, [ebp-4]

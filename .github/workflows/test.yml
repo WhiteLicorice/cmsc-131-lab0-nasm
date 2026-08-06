@@ -24,6 +24,13 @@ jobs:
           make clean
           make check
 
+      # skel reads nothing, so every step above leaves read_int and read_char
+      # untouched. readback calls both, and its fixture holds the echo they
+      # print when stdin is a file rather than a terminal. Without this step
+      # the ELF half of that echo could break here unnoticed.
+      - name: Check a program that reads
+        run: make PROG=readback check
+
       # .note.GNU-stack is added to asm_io.inc and asm_io.asm for this course.
       # Without it binutils 2.39 and later warn that the missing section
       # implies an executable stack. This step is what proves the addition

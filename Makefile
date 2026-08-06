@@ -82,12 +82,10 @@ run: $(BIN)
 STDIN := $(if $(wildcard $(PROG).input),< $(PROG).input,)
 
 # replay is the same run check performs, with the comparison left off, so the
-# bytes check reads can be read by a person. They are not the bytes you see
-# when you run the program yourself. Input arriving from a file means no
-# terminal is echoing your keystrokes back, so nothing puts the typed digits
-# on screen and a prompt shares a line with whatever prints after it. That
-# surprises everyone once. replay is how you look at it rather than take it on
-# faith.
+# bytes check reads can be read by a person. They should match a run you typed
+# at yourself: read_int and read_char print what they read when stdin is not a
+# terminal, which puts back the echo a keyboard would have supplied. replay is
+# how you look at that rather than take it on faith.
 replay: $(BIN)
 	@./$(BIN) $(STDIN)
 

@@ -42,46 +42,60 @@ stdin:
 make PROG=convert check      # runs ./convert.exe < convert.input
 ```
 
-That changes what the program prints, and `replay` is how you see it. It runs
-the program exactly as `check` does and stops there, comparing nothing:
+`replay` is how you look at that run. It performs the same run `check`
+performs and stops there, comparing nothing:
 
 ```bash
 make PROG=convert replay
 ```
 
-What comes back is the contents of `convert.expected`. It doesn't look like
-what you get running the program by hand. A prompt shares a line with whatever
-prints after it, while the number that was read is nowhere on screen:
+What comes back is the contents of `convert.expected`. It reads like a
+transcript of you typing at the program:
 
 ```
-Enter a number: You typed: 42
+Enter a number: 42
+You typed: 42
 ```
 
-Run the same program yourself and `42` sits on the line you typed it. Nothing
-in the program changed. Typing at a terminal makes the terminal echo your
-keystrokes back, so that echo is what you were reading. Take the keyboard away
-and the echo goes with it, leaving only what the program wrote, which is what
-`check` compares against.
+That takes arranging. A file on stdin holds nothing corresponding to the `42`
+on the first line, because when you type at a terminal it's the terminal that
+prints your keystrokes back, and no part of that echo passes through the
+program. Redirect stdin and the echo goes away with the keyboard, leaving the
+prompt to share a line with `You typed:` while the number appears nowhere at
+all.
 
-So `$(PROG).expected` holds the quieter version. Generate one with `replay`
-rather than by hand, and check it against a run you trust before committing
-it.
+So `read_int` and `read_char` echo for themselves when nobody else will. Each
+asks `isatty` whether stdin is a terminal and prints what it just read if the
+answer is no. That's the third addition to Carter's files. It's what makes
+`$(PROG).expected` an ordinary transcript rather than a puzzle, at the price of
+a routine named `read_` that prints, which the manuals explain once in Block 2.
+
+Generate a `.expected` with `replay` rather than by hand, then check it against
+a run you trust before committing it.
+
+`readback` keeps that honest. It calls `read_char` twice and `read_int` once,
+and `make PROG=readback check` compares the result against a fixture holding
+the echo. Continuous integration runs it, since `skel` reads nothing and would
+notice none of this breaking on Linux.
 
 ## Contents
 
 | File | Origin | Purpose |
 |---|---|---|
-| `asm_io.asm` | Paul Carter's pcasm library, with one addition | I/O routines and the `dump_regs` family of macros |
+| `asm_io.asm` | Paul Carter's pcasm library, with two additions | I/O routines and the `dump_regs` family of macros |
 | `asm_io.inc` | Paul Carter's pcasm library, with one addition | Macro and `extern` declarations every program includes |
 | `cdecl.h`, `driver.c` | Paul Carter's pcasm library | C entry point that calls `asm_main` |
 | `skel.asm` | Paul Carter's pcasm library | Skeleton program, prints `Hello, world!` |
 | `skel.expected` | this repository | Expected stdout for `skel.asm` |
+| `readback.asm` | this repository | A program that reads, so CI exercises `read_int` and `read_char` |
+| `readback.input`, `readback.expected` | this repository | Its stdin and the transcript it should produce |
 | `Makefile` | this repository | Builds on either platform |
 | `.vscode/tasks.json` | this repository | Optional editor wrapper that shells out to the Makefile |
 | `.github/workflows/test.yml` | this repository | Proves the Linux build on every push |
 
 Carter's files are his. Each addition to them is marked in place with a comment
-saying so. Both are described below.
+saying so. There are three: the two platform ones described below, and the echo
+described above.
 
 The whole repository is under CC BY-NC-SA 4.0, because Carter's code is and
 its ShareAlike condition reaches anything adapted from it. See
@@ -101,7 +115,7 @@ exports. Linux C doesn't, so the entry point is `_asm_main` on one platform and
 `asm_main` on the other. Rather than keep two spellings of every program,
 `asm_io.inc` remaps the name when `ELF_TYPE` is defined. You write
 `global _asm_main` and `_asm_main:` everywhere. The assembler emits
-whichever the platform needs. That's the first addition to Carter's files.
+whichever the platform needs. That's one of the additions to Carter's files.
 
 Linking is the third. Windows needs `-Wl,-subsystem,console` to say this is a
 command-line program. Linux needs `-no-pie`, because gcc has defaulted to
@@ -110,10 +124,12 @@ addressing this course teaches can't be relocated that way. Leave it out and
 the link fails with `relocation R_386_32 ... can not be used when making a PIE
 object`, which tells you very little unless you already knew this paragraph.
 
-The second addition is a `.note.GNU-stack` section in both `asm_io.inc` and
-`asm_io.asm`. Without it, binutils 2.39 and later warn on every link that the
-missing section implies an executable stack. `asm_io.asm` needs its own copy
-because it doesn't include `asm_io.inc`.
+The other platform addition is a `.note.GNU-stack` section in both
+`asm_io.inc` and `asm_io.asm`. Without it, binutils 2.39 and later warn on
+every link that the missing section implies an executable stack. `asm_io.asm`
+needs its own copy because it doesn't include `asm_io.inc`. The `%define` that
+respells `_isatty` as `isatty` under ELF sits in that same block, since the
+echo calls a C function and the decoration rule above reaches it too.
 
 ### Why the platform check asks twice
 
@@ -149,9 +165,11 @@ predicted.
 | `make PROG=x check` with an `.input` present | reads the file, passes, exit 0 |
 | a `read_int` program run with its input redirected | prints no echo of the typed digits, so the prompt and the next output share a line |
 
-That last row is why `$(PROG).expected` files here hold output with no typed
-digits in them. It surprised the person writing this and it will surprise
-students, so it's written down rather than left to be rediscovered.
+That last row was why `$(PROG).expected` files here used to hold output with
+no typed digits in them. It surprised the person writing this and it surprised
+students, and four manuals ended up carrying a paragraph apologising for it.
+The echo added on 2026-08-07 is what closed it, so the row records a behaviour
+this repository no longer has.
 
 **Windows, 2026-08-06, gdb.** Block 4 rests entirely on the debugger, and none
 of what it claims had been run. All of it was, against `broken.exe`, a COFF
@@ -390,6 +408,51 @@ One thing `replay` does not hide. The first run after a `clean` prints the
 four build commands above the program's output, because `make` echoes its
 recipes. Run it a second time and only the program's output is left. Worth
 knowing before you compare what you see against a fixture.
+
+**The echo in read_int and read_char, 2026-08-07.** The addition itself, and
+every fixture in the course regenerated by running a program against it. Each
+`.expected` was produced by running the block's carried-forward solution with
+its `.input` redirected, never by editing the file, and then compared by that
+block's own `check`.
+
+| Check | Result |
+|---|---|
+| `__isatty` resolves at link | yes on COFF. `nm asm_io.obj` shows `U __isatty`, and the C function is `_isatty` |
+| `isatty` resolves under ELF | `nasm -f elf32 -d ELF_TYPE` emits `U isatty`, undecorated, so the `%define` in the ELF block does its job |
+| `make check` on `skel` | `OK: skel matches skel.expected`, exit 0, unchanged |
+| blocks 2, 3, 5, 6 and 7, each solution against its regenerated fixture | all five `OK` |
+| block 4 fixed, against its regenerated fixture | `OK` |
+| block 4 unfixed, stdin redirected | exits `0xC0000095` having printed nothing, unchanged |
+| block 8's throwaway program against `exitcheck.expected` | `OK`, and all seven cases in `b8_validation.py` pass |
+| `convert` run directly as `./convert.exe < convert.input` | same transcript, so this is not an artefact of `make` |
+| `make PROG=convert replay` | byte-identical to `convert.expected` |
+| `make PROG=readback check` | `OK`, exercising `read_char` twice and `read_int` once |
+| all five starter files | assemble untouched |
+| the `b1` bundle's `asm_io.asm` after `make-bootcamp-bundles.sh` | byte-identical to what the previous bundle shipped, so Carter's original is still reconstructed exactly |
+
+The interactive half needed arranging, because Git Bash here has neither
+`script` nor `expect`. A program was given a console as stdin instead, with
+its keystrokes written into that console's input buffer by `WriteConsoleInput`
+and its stdout redirected to a file. `_isatty(0)` answered 64 under those
+conditions and 0 under both a file and a pipe. `convert` read the typed `69`,
+computed 156, 341 and 68 from it, and printed no echo of its own, which is the
+branch the gate exists to take. Two earlier attempts failed in ways somebody
+else would hit too. `winpty` refuses with `stdin is not a tty` when its own
+stdin is a pipe, and driving a console window with `SendKeys` types into
+whatever holds focus, which on this machine was an editor.
+
+Block 4's gdb session was walked again on the same footing, with a console for
+stdin, since that's what a student has. It is unchanged: `break asm_main`
+resolves, the run stops there, `continue` reaches `SIGFPE` with `eax` at 1000,
+`ebx` at 7 and `edx` dirty at `0x30000`. No echo appears, because the gate sees
+a terminal.
+
+The regeneration turned up one disagreement. Block 8's `exitcheck.expected`
+did not match the sample run printed in the manual. The manual shows a blank
+line between the last reading and the `Packed:` line, while the old fixture
+had none, because with no echo the program's own newline closed the
+run-together prompt line instead of opening a blank one. They agree now. Every
+other manual's sample run matched its regenerated fixture already.
 
 Toolchain observed:
 
