@@ -256,16 +256,105 @@ One Linux-only wrinkle worth knowing. Ubuntu's gdb asks whether to enable
 `debuginfod` the first time it starts. It is harmless and answering `n` is
 right for this course. Block 4 says so.
 
+**Windows from nothing, 2026-08-06.** The gap this file has carried since it
+was written. MSYS2 and devkitPro were uninstalled and their folders deleted,
+NASM was removed, and Block 1 was then walked from Part 3 through Part 8 as
+printed rather than from memory. Strawberry Perl stayed on the machine
+deliberately, because `C:\Strawberry\c\bin` supplies an `x86_64-w64-mingw32`
+gcc from the machine `Path`, which is the hazard Part 4 warns about sitting on
+the machine by accident.
+
+| Check | Result |
+|---|---|
+| `winget install --id MSYS2.MSYS2 --exact` | installed from a PowerShell that was not elevated, with no approval prompt |
+| `pacman -Syu` | two runs needed, the first stopping after `msys2-runtime` with `warning: terminate other MSYS2 programs before proceeding` |
+| `pacman -S --needed mingw-w64-i686-toolchain` | 42 packages, nothing asked beyond the group default |
+| a mirror answering 404 partway through a download | pacman moved to another mirror and finished, on both runs |
+| the NASM installer, run at its default location | lands in `C:\Users\<you>\AppData\Local\bin\NASM`, as Part 3 says |
+| Part 4's verify | `i686-w64-mingw32`, `GNU Make 4.4.1`, `GNU gdb (GDB) 17.2` |
+| Part 5's `make` alias, starting from no `~/.bashrc` at all | the file is created and a new interactive shell answers `make --version` |
+| Part 7 built by hand, `Makefile` and the `asm_io` addition taken from the manual text | `Hello, world!` |
+| Part 8 | `OK: skel matches skel.expected`, then `clean`, then `check` again |
+| blocks 2, 3, 5, 6 and 7, each carried-forward solution against its fixture | all five `OK` |
+| block 4 unfixed, stdin redirected | exits `0xC0000095` having printed nothing at all |
+| block 4 fixed | `OK: broken matches broken.expected` |
+| block 4's whole gdb session under gdb 17.2 | unchanged from the record above, `edx` dirty at `0x30000`, fault on `div ebx` |
+| block 8 against `exitcheck.expected` | `OK` |
+| all five starter files | assemble untouched |
+| both checkers | every check passes |
+| the validation scripts | run under `python` |
+
+Block 8's program was written to run that check and then thrown away. Nothing
+resembling a solution to the exit check belongs in `b8/dist`, because the
+generator copies that folder into the student bundle.
+
+Three things the walk found, all of them now fixed in Block 1.
+
+**The MSYS2 install needs no administrator.** The manual said Windows would
+ask for approval. It doesn't. `icacls C:\` shows
+`NT AUTHORITY\Authenticated Users:(AD)`, the right to add a subdirectory, so
+any signed-in user may create `C:\msys64`, which is all the installer does
+there. The measurements, all taken on this machine:
+
+- winget's own log launches the installer directly, with no elevation step
+- the session running it reported `IsInRole(Administrator)` as false
+- `C:\msys64` came out owned by an ordinary user account
+
+A managed machine can have that right removed,
+and there the install does stop, so Block 1 now describes that as the
+exception rather than the rule.
+
+**Part 4 step 4 could not fix the ordering it promised to fix.** Windows
+composes a process `PATH` as the machine list followed by the user list. Step
+4 sends the student to *User variables*, which puts `C:\msys64\mingw32\bin`
+after every system entry, so a 64-bit gcc already in the system list still
+wins. Measured here with the stale entries stripped, `gcc` resolved to
+`C:\Strawberry\c\bin` and `gcc -dumpmachine` answered `x86_64-w64-mingw32`,
+with MSYS2 added under *User variables*, which is where the manual said to add
+it. There is no user-level fix. Block 1 now explains the two lists and says that moving the
+folder to the top of the system list is the one step in the block needing an
+administrator.
+
+**The pitfall named the wrong error.** Block 1 quoted
+`i386 architecture of input file ... is incompatible`. That message does
+appear, but it belongs to a dropped `-m32` on the link line. With `-m32`
+present, which is what the printed `Makefile` does, a 64-bit MinGW assembles
+and compiles without complaint and then fails at the link with a wall of
+`skipping incompatible ... when searching for -lmingw32` lines ending in
+`cannot find -lmingw32: No such file or directory`. Nothing in that message
+mentions widths. Both now appear in Common Pitfalls as separate entries.
+
+Two smaller corrections went in alongside. There is no directory named
+`stable` on nasm.us, so Part 3 now sends the student to **Download** and the
+highest plain version number, currently 3.02. And `b1_doctor.ps1` had two
+false passes: `Find-Tool` returned `$c.Source` for any command, which is an
+empty string for a PowerShell alias rather than a null, so the built-in `diff`
+alias for `Compare-Object` was reported as a working `diff`. The bash check
+was wrong in the other direction. Git for Windows puts neither
+`bash.exe` nor `diff.exe` on `PATH`, so asking `PATH` about them proved
+nothing either way, and on a machine with WSL the name `bash` resolves to
+`C:\Windows\System32\bash.exe`, which starts Linux. The checker now derives
+the Git root from `git.exe` and looks for `bin\bash.exe` and
+`usr\bin\diff.exe` underneath it.
+
+Toolchain observed:
+
+```
+NASM version 3.02 compiled on Jun 28 2026
+gcc.exe (Rev6, Built by MSYS2 project) 16.1.0
+gcc -dumpmachine -> i686-w64-mingw32
+GNU Make 4.4.1
+GNU gdb (GDB) 17.2
+GNU ld (GNU Binutils) 2.47.20260726
+git version 2.55.0.windows.2
+```
+
 ## What wasn't tested
 
 - Debian specifically. Ubuntu 24.04 has now been walked by hand, and the
   `apt` lines in Block 1 were executed rather than read, but Debian's own
   package listings were only read. The package names are the same on both.
 - macOS, at all. No Apple hardware was involved. See below.
-- A first-time install on a machine that has never had MSYS2. The toolchain
-  here was already present, so this project proves the build works, not that
-  the install instructions in Block 1 are complete. Someone has to walk those
-  on a clean machine before August 19.
 - The `.vscode/tasks.json` wrapper. The Makefile it calls is tested. The task
   definition around it isn't. It keeps naming `mingw32-make` explicitly on
   Windows rather than `make`, because editor tasks run a non-interactive shell
