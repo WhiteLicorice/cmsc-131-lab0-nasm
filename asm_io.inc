@@ -1,12 +1,10 @@
 ;
 ; Added for CMSC 131. Not part of Paul Carter's original file.
 ;
-; Windows C decorates the names it exports with a leading underscore and
-; Linux C does not, so the same source would otherwise need two spellings of
-; the entry point. Remapping it here means you write global _asm_main and
-; _asm_main: on both platforms, and this file works out which one the
-; assembler should emit. -d ELF_TYPE, which the Makefile passes on Linux, is
-; what selects it.
+; Windows C puts a leading underscore on every exported name. Linux C does
+; not. You write global _asm_main and _asm_main: on both platforms. The
+; Makefile passes -d ELF_TYPE on Linux. This block then respells the name
+; to match.
 ;
 ; The .note.GNU-stack section tells the linker this object does not want an
 ; executable stack. Without it, binutils 2.39 and later warn on every link.
