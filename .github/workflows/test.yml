@@ -31,6 +31,19 @@ jobs:
       - name: Check a program that reads
         run: make PROG=readback check
 
+      # checkfail prints exactly what skel.expected holds and then exits 1.
+      # The check target must reject it and must name the exit status. A
+      # check that compares output alone accepts this program, and an older
+      # recipe did exactly that because a pipeline reports the status of its
+      # last command. This step is what keeps that hole closed.
+      - name: A nonzero exit status must fail the check
+        run: |
+          if make PROG=checkfail check; then
+            echo "check accepted a program that exited nonzero"
+            exit 1
+          fi
+          echo "check rejected checkfail as intended"
+
       # .note.GNU-stack is added to asm_io.inc and asm_io.asm for this course.
       # Without it binutils 2.39 and later warn that the missing section
       # implies an executable stack. This step is what proves the addition

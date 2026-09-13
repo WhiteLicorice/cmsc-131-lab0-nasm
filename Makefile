@@ -81,6 +81,9 @@ run: $(BIN)
 # line working the same way under Git Bash and under a Linux shell.
 STDIN := $(if $(wildcard $(PROG).input),< $(PROG).input,)
 
+# The captured output lives here for the length of one check, then goes away.
+OUTPUT := $(PROG).check.out
+
 # replay is the same run check performs, with the comparison left off, so the
 # bytes check reads can be read by a person. They should match a run you typed
 # at yourself: read_int and read_char print what they read when stdin is not a
@@ -97,10 +100,32 @@ replay: $(BIN)
 # The two --label flags name the sides of the diff. Without them the second
 # side prints as -, which is what diff calls stdin, and a student reading a
 # failure has to work out which half came from where.
+#
+# The output is captured to a file first, and the program's status is read
+# before the comparison runs. An older recipe piped the program straight into
+# diff, and a pipeline reports the status of its last command alone. A program
+# that printed the right bytes and then died therefore passed the check. The
+# capture closes that hole: a nonzero status fails the check on its own, and
+# the message says so.
 check: $(BIN)
-	@./$(BIN) $(STDIN) | diff -u --strip-trailing-cr --label "$(PROG).expected" --label "what $(PROG) printed" $(PROG).expected - && echo "OK: $(PROG) matches $(PROG).expected"
+	@./$(BIN) $(STDIN) > $(OUTPUT); \
+	status=$$?; \
+	if [ $$status -ne 0 ]; then \
+	    echo "FAIL: $(PROG) exited with status $$status."; \
+	    echo "      The output was:"; \
+	    sed -n '1,20p' $(OUTPUT) | sed 's/^/      /'; \
+	    rm -f $(OUTPUT); \
+	    exit 1; \
+	fi; \
+	if diff -u --strip-trailing-cr --label "$(PROG).expected" --label "what $(PROG) printed" $(PROG).expected $(OUTPUT); then \
+	    echo "OK: $(PROG) matches $(PROG).expected"; \
+	    rm -f $(OUTPUT); \
+	else \
+	    rm -f $(OUTPUT); \
+	    exit 2; \
+	fi
 
 clean:
-	rm -f *.obj *.o *.exe $(PROG)
+	rm -f *.obj *.o *.exe $(PROG) $(PROG).check.out
 
 .PHONY: run replay check clean
