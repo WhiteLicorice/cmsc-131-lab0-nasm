@@ -590,3 +590,25 @@ same line as the two prompts, because a failed read echoes nothing.
 | `readfail` with `5` alone on stdin | `got 5 0`, the second read fails on end of input |
 | `readfail` with empty stdin | `got 0 0` |
 | `make PROG=readback check` | `OK`, unchanged |
+
+## `clean` and the value of `PROG`
+
+**Windows, 2026-09-13.** The `clean` recipe removed `$(PROG)` by name, so
+`make PROG=pack.asm clean` deleted `pack.asm`. That is a source file.
+
+The recipe now removes the objects, the executables, `$(BIN)`, and the
+capture file `check` leaves on a failure. It never names `$(PROG)` on its
+own. The Makefile also checks `PROG` before any recipe runs. A value with a
+space, a dot, a path separator, or a character outside letters, digits,
+underscore, and hyphen stops make with a message that says what a stem
+looks like. The check uses make's own text functions, so the value never
+reaches a shell.
+
+| Check | Result |
+|---|---|
+| `make PROG=pack.asm clean` with `pack.asm` present | make stops with `PROG must be a bare stem with no extension`. `pack.asm` stays. |
+| `make PROG=pack clean` | removes `pack.obj`, `pack.exe` or `pack`, and `pack.check.out` |
+| `make PROG=../pack clean` | make stops with `PROG must be a name in this directory` |
+| `make PROG=Makefile clean` | make stops with `PROG must not be Makefile` |
+| `make PROG='a b' clean` | make stops with `PROG must be one word` |
+| `make PROG='a;b' clean` | make stops with `PROG may hold only letters, digits, underscores, and hyphens` |

@@ -58,6 +58,35 @@ endif
 CFLAGS := -m32
 
 PROG ?= skel
+
+# PROG names a program stem, and a stem is one word made of letters, digits,
+# underscores, and hyphens. Anything else stops make here, before any recipe
+# runs. The check exists for clean: an older recipe removed $(PROG) itself,
+# so PROG=pack.asm deleted the source file. The recipe now removes only the
+# files this Makefile generates, and this check makes sure PROG can never
+# spell a source file, a path, or a shell fragment.
+#
+# The test uses make's own substitution, not the shell. A value with shell
+# characters in it therefore never reaches a shell.
+ifneq ($(words $(PROG)),1)
+  $(error PROG must be one word with no spaces. Got: "$(PROG)")
+endif
+ifneq ($(suffix $(PROG)),)
+  $(error PROG must be a bare stem with no extension. Use PROG=pack, not PROG=$(PROG))
+endif
+ifneq ($(findstring /,$(PROG))$(findstring \,$(PROG)),)
+  $(error PROG must be a name in this directory, not a path. Got: $(PROG))
+endif
+ifeq ($(PROG),Makefile)
+  $(error PROG must not be Makefile)
+endif
+STEM_CHARS := a b c d e f g h i j k l m n o p q r s t u v w x y z               A B C D E F G H I J K L M N O P Q R S T U V W X Y Z               0 1 2 3 4 5 6 7 8 9 _ -
+PROG_LEFTOVER := $(PROG)
+$(foreach c,$(STEM_CHARS),$(eval PROG_LEFTOVER := $$(subst $(c),,$$(PROG_LEFTOVER))))
+ifneq ($(PROG_LEFTOVER),)
+  $(error PROG may hold only letters, digits, underscores, and hyphens. Got: $(PROG))
+endif
+
 BIN  := $(PROG)$(EXE)
 
 $(BIN): $(PROG).obj asm_io.obj driver.o
@@ -125,7 +154,11 @@ check: $(BIN)
 	    exit 2; \
 	fi
 
+# clean removes what this Makefile generates and nothing else: the objects,
+# the executables, and the capture file check leaves behind on a failure.
+# $(BIN) is $(PROG) plus the platform's executable suffix, and PROG has
+# been checked above, so this line can never name a source file.
 clean:
-	rm -f *.obj *.o *.exe $(PROG) $(PROG).check.out
+	rm -f *.obj *.o *.exe $(BIN) $(OUTPUT)
 
 .PHONY: run replay check clean

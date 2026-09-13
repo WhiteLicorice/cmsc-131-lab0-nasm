@@ -38,6 +38,26 @@ jobs:
       - name: Check what read_int returns without a number
         run: make PROG=readfail check
 
+      # clean must never remove a source file. An older recipe removed
+      # $(PROG) by name, so PROG=pack.asm deleted pack.asm. The Makefile now
+      # rejects a PROG that is not a bare stem, and clean names only the
+      # files it generates.
+      - name: clean must not delete a source named by PROG
+        run: |
+          echo "; source" > pack.asm
+          if make PROG=pack.asm clean; then
+            echo "make accepted PROG=pack.asm"
+            exit 1
+          fi
+          test -f pack.asm
+          for bad in '../pack' Makefile 'a b' 'a;b'; do
+            if make PROG="$bad" clean; then
+              echo "make accepted PROG=$bad"
+              exit 1
+            fi
+          done
+          rm -f pack.asm
+
       # checkfail prints exactly what skel.expected holds and then exits 1.
       # The check target must reject it and must name the exit status. A
       # check that compares output alone accepts this program, and an older
