@@ -5,3 +5,4 @@ skel
 readback
 checkfail
 *.check.out
+readfail

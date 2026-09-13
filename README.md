@@ -82,20 +82,24 @@ notice none of this breaking on Linux.
 
 | File | Origin | Purpose |
 |---|---|---|
-| `asm_io.asm` | Paul Carter's pcasm library, with two additions | I/O routines and the `dump_regs` family of macros |
+| `asm_io.asm` | Paul Carter's pcasm library, with three additions | I/O routines and the `dump_regs` family of macros |
 | `asm_io.inc` | Paul Carter's pcasm library, with one addition | Macro and `extern` declarations every program includes |
 | `cdecl.h`, `driver.c` | Paul Carter's pcasm library | C entry point that calls `asm_main` |
 | `skel.asm` | Paul Carter's pcasm library | Skeleton program, prints `Hello, world!` |
 | `skel.expected` | this repository | Expected stdout for `skel.asm` |
 | `readback.asm` | this repository | A program that reads, so CI exercises `read_int` and `read_char` |
 | `readback.input`, `readback.expected` | this repository | Its stdin and the transcript it should produce |
+| `readfail.asm` | this repository | A program that reads past the end of its input, so CI checks what `read_int` returns then |
+| `readfail.input`, `readfail.expected` | this repository | One word that is not a number, and the transcript two failed reads produce |
+| `checkfail.asm`, `checkfail.expected` | this repository | A program that prints the right bytes and exits 1, so CI checks that `check` reads the status |
 | `Makefile` | this repository | Builds on either platform |
 | `.vscode/tasks.json` | this repository | Optional editor wrapper that shells out to the Makefile |
 | `.github/workflows/test.yml` | this repository | Proves the Linux build on every push |
 
 Carter's files are his. Each addition to them is marked in place with a comment
-saying so. There are three: the two platform ones described below, and the echo
-described above.
+saying so. There are four: the two platform ones described below, the echo
+described above, and the deterministic return value of `read_int` described
+in its own section below.
 
 The whole repository is under CC BY-NC-SA 4.0, because Carter's code is and
 its ShareAlike condition reaches anything adapted from it. See
@@ -559,3 +563,30 @@ fixture and fails the build when `check` accepts it.
 | `make PROG=checkfail check` with the old pipeline recipe | `OK: checkfail matches checkfail.expected`, exit 0. This is the defect, captured before the repair. |
 | `make PROG=readback check` | `OK`, unchanged |
 | `$(PROG).check.out` left behind after a pass or a failure | none |
+
+## What `read_int` returns when there is no number
+
+**Windows and Linux, 2026-09-13.** Carter's `read_int` passed a stack slot to
+`scanf` and returned the slot. It never read the count `scanf` returns. On end
+of input, or on a word that is not a number, `scanf` writes nothing. The
+routine then returned whatever the slot held, and the echo printed that
+value. The value changed from run to run and between the two platforms.
+
+The routine now sets the slot to 0 before the call and reads the count after
+it. A failed read returns 0 and prints no echo. The word that failed to
+convert stays in the input, so a second call fails on the same word. That is
+a limit of the one-value interface. A program that re-prompts until a number
+is in range must not run past the end of its input.
+
+`readfail.asm` is the fixture. It calls `read_int` twice on an input that
+holds one word, `abc`. Both reads fail. The program prints `got 0 0` on the
+same line as the two prompts, because a failed read echoes nothing.
+`.github/workflows/test.yml` runs it.
+
+| Check | Result |
+|---|---|
+| `make PROG=readfail check` | `OK: readfail matches readfail.expected` |
+| `readfail` with `5` and `7` on stdin | `got 5 7`, both echoed |
+| `readfail` with `5` alone on stdin | `got 5 0`, the second read fails on end of input |
+| `readfail` with empty stdin | `got 0 0` |
+| `make PROG=readback check` | `OK`, unchanged |

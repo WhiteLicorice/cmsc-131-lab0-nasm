@@ -99,6 +99,14 @@ read_int:
 	pusha
 	pushf
 
+	; Added for CMSC 131. The slot starts at 0. scanf writes the slot only
+	; when it reads a number. On end of input, or on a word that is not a
+	; number, the slot keeps the 0 and the routine returns 0. Carter's
+	; version returned the unset slot in that case, and the value changed
+	; from run to run.
+	mov	dword [ebp-4], 0
+	; End of CMSC 131 addition.
+
 	lea	eax, [ebp-4]
 	push	eax
 	push	dword int_format
@@ -106,11 +114,19 @@ read_int:
 	pop	ecx
 	pop	ecx
 	
-	; Added for CMSC 131. With stdin coming from a file there is no
-	; terminal echoing the typed digits back, so the number never appears
-	; and the prompt shares a line with whatever prints next. Printing the
-	; value here puts it back, which makes a redirected run read the same
-	; as a typed one and lets PROG.expected hold what a student sees.
+	; Added for CMSC 131. scanf returns the count of values it read. A
+	; count other than 1 means no number was read. The echo below prints
+	; nothing in that case, because there is no typed number to put back.
+	; The word that failed to convert stays in the input. A second call
+	; fails on the same word.
+	cmp	eax, 1
+	jne	.no_echo
+
+	; With stdin coming from a file there is no terminal echoing the
+	; typed digits back, so the number never appears and the prompt shares
+	; a line with whatever prints next. Printing the value here puts it
+	; back, which makes a redirected run read the same as a typed one and
+	; lets PROG.expected hold what a student sees.
 	push	dword 0
 	call	__isatty
 	pop	ecx
