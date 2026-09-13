@@ -22,7 +22,12 @@ that the terms covering it are unambiguous.
 
 ATTRIBUTION
 
-Paul Carter, PC Assembly Language example code:
+This file travels with the reference repository and with every course
+archive built from it. The attribution below is by origin, not by
+inventory, so it stays true in each of those places.
+
+Paul Carter, PC Assembly Language example code. Five files, and only these
+five, come from Carter:
 
     asm_io.asm      adapted, see below
     asm_io.inc      adapted, see below
@@ -31,18 +36,11 @@ Paul Carter, PC Assembly Language example code:
     skel.asm        unmodified
 
 Rene Andre Bedonia Jocsing, for CMSC 131 at the University of the
-Philippines Visayas:
-
-    Makefile
-    skel.expected
-    readback.asm
-    readback.input
-    readback.expected
-    .gitattributes
-    .gitignore
-    .vscode/tasks.json
-    .github/workflows/test.yml
-    README.md
+Philippines Visayas: every other file in the repository or archive that
+carries this LICENSE. That includes the Makefile, the fixtures, the
+starters, the validators, the solutions carried forward, and the
+documentation. The README of the repository lists its own files. An
+archive lists nothing, because its contents are the manifest.
 
 
 CHANGES MADE TO CARTER'S FILES
