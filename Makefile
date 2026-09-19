@@ -121,6 +121,10 @@ OUTPUT := $(PROG).check.out
 replay: $(BIN)
 	@./$(BIN) $(STDIN)
 
+# --color=auto highlights the diff for a student reading it in a terminal.
+# It checks isatty itself, so it stays off under CI and any other redirected
+# or piped output, where escape codes would just be noise.
+#
 # --strip-trailing-cr matters on Windows: the .exe emits Windows line endings
 # (\r\n) while $(PROG).expected is stored with Unix ones (\n). Without it
 # every line differs invisibly and check fails on output that is actually
@@ -146,7 +150,7 @@ check: $(BIN)
 	    rm -f $(OUTPUT); \
 	    exit 1; \
 	fi; \
-	if diff -u --strip-trailing-cr --label "$(PROG).expected" --label "what $(PROG) printed" $(PROG).expected $(OUTPUT); then \
+	if diff -u --color=auto --strip-trailing-cr --label "$(PROG).expected" --label "what $(PROG) printed" $(PROG).expected $(OUTPUT); then \
 	    echo "OK: $(PROG) matches $(PROG).expected"; \
 	    rm -f $(OUTPUT); \
 	else \
